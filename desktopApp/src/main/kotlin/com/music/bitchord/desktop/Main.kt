@@ -139,6 +139,11 @@ private fun desktopMain() = application {
                 (openingSize.width.value * transform.scaleX).roundToInt(),
                 (openingSize.height.value * transform.scaleY).roundToInt(),
             )
+            // Re-assert the AWT peer's resizable hint after applying the minimum and
+            // initial bounds. On some Linux desktop sessions (notably GNOME on Wayland via
+            // XWayland), the native window manager can otherwise treat the peer as fixed-size,
+            // ignoring edge drags and maximize requests despite Compose's resizable=true.
+            composeWindow.isResizable = true
             if (DesktopPlatform.isWindows && DesktopWindowsFrame.install("BitChord")) {
                 DesktopWindowBackdrop.apply()
             } else if (DesktopPlatform.isMac && DesktopMacFrame.install(composeWindow)) {
