@@ -1,0 +1,75 @@
+name: Build Linux AppImage
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number, without the leading v"
+        required: true
+        default: "1.0.1"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  appimage:
+    name: Build AppImage only
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Set version
+        id: version
+        shell: bash
+        run: |
+          echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+
+      - name: Write local.properties
+        shell: bash
+        run: |
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" > local.properties
+          echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> local.properties
+
+      - name: Install AppImage tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot binutils file
+          curl -fsSL -o appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool.AppImage
+          chmod +x gradlew
+
+      - name: Run desktop tests
+        run: ./gradlew :shared:jvmTest :desktopApp:test -Pbitchord.version=${{ steps.version.outputs.value }}
+
+      - name: Build Linux app bundle
+        run: ./gradlew :desktopApp:createDistributable -Pbitchord.version=${{ steps.version.outputs.value }}
+
+      - name: Verify bundled analyser and models
+        run: |
+          jar=$(ls desktopApp/build/compose/binaries/main/app/BitChord/lib/app/desktopApp*.jar)
+          jar tf "$jar" | grep -q 'native/libbitchord_analysis.so'
+          jar tf "$jar" | grep -q 'models/.*\.onnx'
+
+      - name: Package AppImage
+        run: |
+          mkdir -p dist
+          desktopApp/packaging/appimage.sh \
+            desktopApp/build/compose/binaries/main/app/BitChord \
+            dist/BitChord-${{ steps.version.outputs.value }}-linux-x86_64.AppImage \
+            "$PWD/appimagetool.AppImage"
+
+      - name: Upload AppImage only
+        uses: actions/upload-artifact@v4
+        with:
+          name: BitChord-AppImage
+          path: dist/*.AppImage
+          if-no-files-found: error
