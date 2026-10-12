@@ -104,6 +104,8 @@ private fun desktopMain() = application {
         // DWM's material show through the chrome. Fixed at creation, so it is on wherever the
         // material is possible and the chosen one can be switched live — see [DesktopWindowBackdrop].
         transparent = DesktopWindowBackdrop.available,
+        // Keep the window manager's native resize handles enabled, especially on Linux where the
+        // system frame is responsible for moving and resizing the AppImage window.
         resizable = true,
     ) {
         val composeWindow = window
@@ -131,10 +133,8 @@ private fun desktopMain() = application {
                 (MIN_WINDOW_HEIGHT_DP * transform.scaleY).roundToInt(),
             )
             // Setting AWT's minimum during the first composition can resize the native peer to
-            // that minimum without updating Compose's state. Compose would then keep laying out a
-            // 1220dp surface inside a 900dp window, cropping the right edge and putting its resize
-            // boundary off-screen until a maximize/restore cycle synchronised the two. Re-assert
-            // the requested opening size on the native peer so both layers start in agreement.
+            // that minimum without updating Compose's state. Re-assert the requested opening size
+            // on the native peer so both layers start in agreement.
             composeWindow.size = Dimension(
                 (openingSize.width.value * transform.scaleX).roundToInt(),
                 (openingSize.height.value * transform.scaleY).roundToInt(),
@@ -184,5 +184,6 @@ private fun desktopMain() = application {
     }
 }
 
-private const val MIN_WINDOW_WIDTH_DP = 900.0
-private const val MIN_WINDOW_HEIGHT_DP = 600.0
+// Let users resize the desktop UI on smaller displays while keeping enough room for core controls.
+private const val MIN_WINDOW_WIDTH_DP = 720.0
+private const val MIN_WINDOW_HEIGHT_DP = 480.0
