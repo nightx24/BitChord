@@ -109,7 +109,6 @@ private fun desktopMain() = application {
         resizable = true,
     ) {
         val composeWindow = window
-        val openingSize = remember { state.size }
         LaunchedEffect(composeWindow) {
             DesktopWindowVisibility.attachWindow(composeWindow)
             // AWT's default is white, and it is what shows for the frame or two a moved or resized
@@ -132,13 +131,9 @@ private fun desktopMain() = application {
                 (MIN_WINDOW_WIDTH_DP * transform.scaleX).roundToInt(),
                 (MIN_WINDOW_HEIGHT_DP * transform.scaleY).roundToInt(),
             )
-            // Setting AWT's minimum during the first composition can resize the native peer to
-            // that minimum without updating Compose's state. Re-assert the requested opening size
-            // on the native peer so both layers start in agreement.
-            composeWindow.size = Dimension(
-                (openingSize.width.value * transform.scaleX).roundToInt(),
-                (openingSize.height.value * transform.scaleY).roundToInt(),
-            )
+            // Let Compose's WindowState own the opening bounds. Mutating the AWT peer's bounds
+            // during first composition can race with the initial native configure on Linux/XWayland.
+            // The requested opening size is already supplied by rememberWindowState above.
             // Re-assert the AWT peer's resizable hint after applying the minimum and
             // initial bounds. On some Linux desktop sessions (notably GNOME on Wayland via
             // XWayland), the native window manager can otherwise treat the peer as fixed-size,
