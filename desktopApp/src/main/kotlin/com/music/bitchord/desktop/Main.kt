@@ -109,7 +109,6 @@ private fun desktopMain() = application {
         resizable = true,
     ) {
         val composeWindow = window
-        val openingSize = remember { state.size }
         LaunchedEffect(composeWindow) {
             DesktopWindowVisibility.attachWindow(composeWindow)
             // AWT's default is white, and it is what shows for the frame or two a moved or resized
