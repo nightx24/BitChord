@@ -132,18 +132,10 @@ private fun desktopMain() = application {
                 (MIN_WINDOW_WIDTH_DP * transform.scaleX).roundToInt(),
                 (MIN_WINDOW_HEIGHT_DP * transform.scaleY).roundToInt(),
             )
-            // Setting AWT's minimum during the first composition can resize the native peer to
-            // that minimum without updating Compose's state. Re-assert the requested opening size
-            // on the native peer so both layers start in agreement.
-            composeWindow.size = Dimension(
-                (openingSize.width.value * transform.scaleX).roundToInt(),
-                (openingSize.height.value * transform.scaleY).roundToInt(),
-            )
-            // Re-assert the AWT peer's resizable hint after applying the minimum and
-            // initial bounds. On some Linux desktop sessions (notably GNOME on Wayland via
-            // XWayland), the native window manager can otherwise treat the peer as fixed-size,
-            // ignoring edge drags and maximize requests despite Compose's resizable=true.
-            composeWindow.isResizable = true
+            // Let Compose's WindowState own the opening bounds and let the native window manager
+            // own interactive resizing. Mutating the AWT peer's bounds during first composition can
+            // race with the initial native configure on Linux/XWayland; the initial size is already
+            // supplied by rememberWindowState above, and resizable=true is set on Window itself.
             if (DesktopPlatform.isWindows && DesktopWindowsFrame.install("BitChord")) {
                 DesktopWindowBackdrop.apply()
             } else if (DesktopPlatform.isMac && DesktopMacFrame.install(composeWindow)) {
